@@ -1,0 +1,4 @@
+.gitignore
+__pycache__/
+.venv/
+deploy_gcp.ps1
