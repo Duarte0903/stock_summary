@@ -6,12 +6,13 @@ from fetch_data import fetch_data
 from process_stock_data import analyze_stocks_with_gemini
 from send_email import format_stock_analysis_email, send_email
 
-def main(event, context): 
+def main(request): 
     print("Starting the script...")
 
-    if 'data' in event:
-        message = base64.b64decode(event['data']).decode('utf-8')
-        print(f"Received Pub/Sub message: {message}")
+    message = request.get_json(silent=True)
+    if message and "data" in message:
+        decoded_message = base64.b64decode(message["data"]).decode("utf-8")
+        print(f"Received Pub/Sub message: {decoded_message}")
 
     stocks_data = fetch_data()
     print("Data fetched successfully.")

@@ -26,48 +26,28 @@ if (-not $saExists) {
     Write-Host "Service account $SAEmail já existe."
 }
 
-# give Pub/Sub permissions to the service account
-gcloud projects add-iam-policy-binding $ProjectId `
-    --member "serviceAccount:$SAEmail" `
-    --role "roles/pubsub.publisher"
-
-gcloud projects add-iam-policy-binding $ProjectId `
-    --member "serviceAccount:$SAEmail" `
-    --role "roles/pubsub.subscriber"
-
-gcloud projects add-iam-policy-binding $ProjectId `
-    --member "serviceAccount:$SAEmail" `
-    --role "roles/cloudfunctions.invoker"
-
-# create Pub/Sub topic if it doesn't exist
-$topicExists = gcloud pubsub topics list --filter="name~$TopicName" --format="value(name)"
-if (-not $topicExists) {
-    Write-Host "Tópico $TopicName não existe. A criar..."
-    gcloud pubsub topics create $TopicName
-} else {
-    Write-Host "Tópico $TopicName já existe."
-}
-
 # deploy cloud run function
 gcloud functions deploy $FunctionName `
     --source . `
     --runtime python311 `
     --entry-point main `
-    --trigger-topic $TopicName `
+    --trigger-http `
+    --allow-unauthenticated `
     --region $Region `
     --timeout 540s `
     --memory 1Gi `
-    --service-account $SAEmail `
+    --service-account $SAEmail
 
-# create Scheduler job
+$FunctionURL = gcloud functions describe $FunctionName --region $Region --format="value(serviceConfig.uri)"
+
 $Cron = "0 9 * * *"
 $jobExists = gcloud scheduler jobs list --location $Region --filter="name~$SchedulerName" --format="value(name)"
 if (-not $jobExists) {
     Write-Host "A criar job do Scheduler..."
-    gcloud scheduler jobs create pubsub $SchedulerName `
+    gcloud scheduler jobs create http $SchedulerName `
         --schedule "$Cron" `
-        --topic $TopicName `
-        --message-body "{}" `
+        --uri "$FunctionURL" `
+        --http-method GET `
         --time-zone "Europe/Lisbon" `
         --location $Region `
         --quiet
