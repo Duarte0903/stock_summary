@@ -1,6 +1,7 @@
 import yfinance as yf
 
 stocks = [
+    "SXR8.DE",
     "AAPL",
     "MSFT",
     "GOOGL",
